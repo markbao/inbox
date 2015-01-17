@@ -13,6 +13,7 @@ class BaseEventProvider(BaseSyncProvider):
     def __init__(self, account_id, namespace_id):
         self.account_id = account_id
         self.namespace_id = namespace_id
+
         self.log = logger.new(account_id=account_id, component='event sync',
                               provider=self.PROVIDER_NAME)
 

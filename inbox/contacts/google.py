@@ -1,6 +1,6 @@
 """Provide Google contacts."""
-
 import posixpath
+from collections import namedtuple
 
 import gdata.auth
 import gdata.client
@@ -11,7 +11,6 @@ logger = get_logger()
 from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
 from inbox.basicauth import OAuthError
 from inbox.models.session import session_scope
-from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
@@ -19,6 +18,10 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
 from inbox.sync.base_sync_provider import BaseSyncProvider
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
+
+GoogleContact = namedtuple(
+    'GoogleContact',
+    'namespace_id uid name provider_name email_address deleted raw_data')
 
 
 class GoogleContactsProvider(BaseSyncProvider):
@@ -47,6 +50,7 @@ class GoogleContactsProvider(BaseSyncProvider):
     def __init__(self, account_id, namespace_id):
         self.account_id = account_id
         self.namespace_id = namespace_id
+
         self.log = logger.new(account_id=account_id, component='contacts sync',
                               provider=self.PROVIDER_NAME)
 
@@ -85,7 +89,8 @@ class GoogleContactsProvider(BaseSyncProvider):
                 raise
 
     def _parse_contact_result(self, google_contact):
-        """Constructs a Contact object from a Google contact entry.
+        """
+        Constructs a Contact object from a Google contact entry.
 
         Parameters
         ----------
@@ -101,22 +106,22 @@ class GoogleContactsProvider(BaseSyncProvider):
         ------
         AttributeError
            If the contact data could not be parsed correctly.
+
         """
         email_addresses = [email for email in google_contact.email if
                            email.primary]
         if email_addresses and len(email_addresses) > 1:
-            self.log.error("Should not have more than one email per entry! {0}"
-                           .format(email_addresses))
+            self.log.error('Should not have more than one email per entry!',
+                            email_addresses=email_addresses)
         try:
             # The id.text field of a ContactEntry object takes the form
             # 'http://www.google.com/m8/feeds/contacts/<useremail>/base/<uid>'.
             # We only want the <uid> part.
             raw_google_id = google_contact.id.text
             _, g_id = posixpath.split(raw_google_id)
-            name = (google_contact.name.full_name.text if (google_contact.name
-                    and google_contact.name.full_name) else None)
-            email_address = (email_addresses[0].address if email_addresses else
-                             None)
+            name = google_contact.name.full_name.text if \
+                (google_contact.name and google_contact.name.full_name) else None
+            email_address = email_addresses[0].address if email_addresses else None
 
             # The entirety of the raw contact data in XML string
             # representation.
@@ -128,10 +133,11 @@ class GoogleContactsProvider(BaseSyncProvider):
 
         deleted = google_contact.deleted is not None
 
-        return Contact(namespace_id=self.namespace_id, source='remote',
-                       uid=g_id, name=name, provider_name=self.PROVIDER_NAME,
-                       email_address=email_address, deleted=deleted,
-                       raw_data=raw_data)
+        return GoogleContact(
+            namespace_id=self.namespace_id, uid=g_id, name=name,
+            provider_name=self.PROVIDER_NAME,
+            email_address=email_address, deleted=deleted,
+            raw_data=raw_data)
 
     def get_items(self, sync_from_time=None, max_results=100000):
         """
