@@ -13,10 +13,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     """Data for a user's contact."""
     API_OBJECT_NAME = 'contact'
 
-    @property
-    def should_suppress_transaction_creation(self):
-        return self.source == 'remote'
-
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
     namespace = relationship(Namespace, load_on_pending=True)
@@ -33,7 +29,7 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     # precomputed to facilitate performant search.
     score = Column(Integer)
 
-    __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
+    __table_args__ = (UniqueConstraint('uid', 'namespace_id',
                                        'provider_name'),)
 
     @validates('raw_data')
@@ -42,7 +38,8 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
 
 
 class MessageContactAssociation(MailSyncBase):
-    """Association table between messages and contacts.
+    """
+    Association table between messages and contacts.
 
     Examples
     --------
@@ -52,6 +49,7 @@ class MessageContactAssociation(MailSyncBase):
     If c is a contact, get messages sent to contact c with
     [assoc.message for assoc in c.message_associations if assoc.field ==
     ...  'to_addr']
+
     """
     contact_id = Column(Integer, ForeignKey(Contact.id, ondelete='CASCADE'),
                         primary_key=True)

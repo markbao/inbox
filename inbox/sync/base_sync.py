@@ -27,7 +27,7 @@ class BaseSync(gevent.Greenlet):
         self.log = logger.new(account_id=account_id)
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
                                                      self.folder_id)
-        self.heartbeat_status.publish(provider_name=self._provider_name,
+        self.heartbeat_status.publish(provider_name=self.provider_name,
                                       folder_name=self.folder_name)
 
         gevent.Greenlet.__init__(self)
@@ -115,7 +115,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
         account = db_session.query(Account).get(account_id)
         change_counter = Counter()
         for item in items:
-            item.namespace = account.namespace
+            namespace_id = account.namespace.id
 
             assert item.uid is not None, 'Got remote item with null uid'
             assert isinstance(item.uid, basestring)
@@ -136,7 +136,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                     change_counter['updated'] += 1
             else:
                 local_item = target_obj(
-                    namespace_id=item.namespace_id, uid=item.uid,
+                    namespace_id=namespace_id, uid=item.uid,
                     name=item.name, provider_name=item.provider_name,
                     email_address=item.email_address, raw_data=item.raw_data)
                 db_session.add(local_item)

@@ -12,28 +12,37 @@ class HasRevisions(ABCMixin):
     """Mixin for tables that should be versioned in the transaction log."""
     @property
     def versioned_relationships(self):
-        """May be overriden by subclasses. This should be the list of
+        """
+        May be overriden by subclasses. This should be the list of
         relationship attribute names that should trigger an update revision
         when changed. (We want to version changes to some, but not all,
-        relationship attributes.)"""
+        relationship attributes.)
+
+        """
         return []
 
     @property
     def should_suppress_transaction_creation(self):
-        """May be overridden by subclasses. We don't want to version certain
+        """
+        May be overridden by subclasses. We don't want to version certain
         specific objects -- for example, Block instances that are just raw
         message parts and not real attachments. Use this property to suppress
         revisions of such objects. (The need for this is really an artifact of
         current deficiencies in our models. We should be able to get rid of it
-        eventually.)"""
+        eventually.)
+
+        """
         return False
 
     # Must be defined by subclasses
     API_OBJECT_NAME = abc.abstractproperty()
 
     def has_versioned_changes(self):
-        """Return True if the object has changes on column properties, or on
-        any relationship attributes named in self.versioned_relationships."""
+        """
+        Return True if the object has changes on column properties, or on
+        any relationship attributes named in self.versioned_relationships.
+
+        """
         obj_state = inspect(self)
         versioned_attribute_names = list(self.versioned_relationships)
         for mapper in obj_state.mapper.iterate_to_root():
@@ -60,7 +69,8 @@ class AddressComparator(Comparator):
 
 
 class HasEmailAddress(object):
-    """Provides an email_address attribute, which returns as value whatever you
+    """
+    Provides an email_address attribute, which returns as value whatever you
     set it to, but uses a canonicalized form for comparisons. So e.g.
     >>> db_session.query(Account).filter_by(
     ...    email_address='ben.bitdiddle@gmail.com').all()
@@ -70,7 +80,9 @@ class HasEmailAddress(object):
     ...    email_address='ben.bitdiddle@gmail.com').all()
     [...]
     will return the same results, because the two Gmail addresses are
-    equivalent."""
+    equivalent.
+
+    """
     _raw_address = Column(String(MAX_INDEXABLE_LENGTH),
                           nullable=True, index=True)
     _canonicalized_address = Column(String(MAX_INDEXABLE_LENGTH),
