@@ -2,20 +2,17 @@ from inbox.log import get_logger
 logger = get_logger()
 
 from inbox.events.google import GoogleEventsProvider
-from inbox.events.outlook import OutlookEventsProvider
-from inbox.events.icloud import ICloudEventsProvider
 from inbox.sync.base_sync import BaseSync
 from inbox.models import Event
 from inbox.util.debug import bind_context
 
 
-__provider_map__ = {'gmail': GoogleEventsProvider,
-                    'outlook': OutlookEventsProvider,
-                    'icloud': ICloudEventsProvider}
+__provider_map__ = {'gmail': GoogleEventsProvider}
 
 
 class EventSync(BaseSync):
-    """Per-account event sync engine.
+    """
+    Per-account event sync engine.
 
     Parameters
     ----------
@@ -30,6 +27,7 @@ class EventSync(BaseSync):
     ---------
     log: logging.Logger
         Logging handler.
+
     """
     def __init__(self, provider_name, account_id, namespace_id,
                  poll_frequency=300):
@@ -53,3 +51,13 @@ class EventSync(BaseSync):
 
     def set_last_sync(self, account, dt):
         account.last_synced_events = dt
+
+    def poll(self):
+        return poll_events(
+            self.account_id, self.provider_instance, self.last_sync,
+            self.target_obj, self.set_last_sync, self.log)
+
+
+def poll_events(account_id, provider_instance, last_sync_fn, target_obj,
+                set_last_sync_fn, log):
+    return

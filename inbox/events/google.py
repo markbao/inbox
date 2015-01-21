@@ -7,6 +7,11 @@ from apiclient.errors import HttpError
 from oauth2client.client import OAuth2Credentials
 from oauth2client.client import AccessTokenRefreshError
 
+# Silence the stupid Google API client logger
+import logging
+apiclient_logger = logging.getLogger('apiclient.discovery')
+apiclient_logger.setLevel(40)
+
 from inbox.basicauth import (ConnectionError, ValidationError, OAuthError)
 from inbox.models import Event, Calendar
 from inbox.models.session import session_scope
@@ -15,19 +20,17 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
 from inbox.events.util import MalformedEventError, parse_datetime
-from inbox.events.base import BaseEventProvider
+from inbox.sync.base_sync_provider import BaseSyncProvider
+from inbox.log import get_logger
+logger = get_logger()
+
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 
 
-# Silence the stupid Google API client logger
-import logging
-apiclient_logger = logging.getLogger('apiclient.discovery')
-apiclient_logger.setLevel(40)
-
-
-class GoogleEventsProvider(BaseEventProvider):
-    """A utility class to fetch and parse Google calendar data for the
+class GoogleEventsProvider(BaseSyncProvider):
+    """
+    A utility class to fetch and parse Google calendar data for the
     specified account using the Google Calendar API.
 
     Parameters
@@ -41,6 +44,7 @@ class GoogleEventsProvider(BaseEventProvider):
         Google API client to do the actual data fetching.
     log: logging.Logger
         Logging handler.
+
     """
     PROVIDER_NAME = 'google'
 
@@ -48,14 +52,42 @@ class GoogleEventsProvider(BaseEventProvider):
     status_map = {'accepted': 'yes', 'needsAction': 'noreply',
                   'declined': 'no', 'tentative': 'maybe'}
 
+    def __init__(self, account_id, namespace_id):
+        self.account_id = account_id
+        self.namespace_id = namespace_id
+
+        self.log = logger.new(account_id=account_id, component='event sync',
+                              provider=self.PROVIDER_NAME)
+
+    def get_calendar_id(self, name, description=None):
+        calendar_id = None
+        with session_scope() as db_session:
+            cal = db_session.query(Calendar). \
+                filter_by(namespace_id=self.namespace_id,
+                          provider_name=self.PROVIDER_NAME,
+                          name=name).first()
+            if not cal:
+                cal = Calendar(namespace_id=self.namespace_id,
+                               provider_name=self.PROVIDER_NAME,
+                               name=name)
+                db_session.add(cal)
+                db_session.commit()
+            calendar_id = cal.id
+
+            # Update the description if appropriate
+            if cal.description != description:
+                cal.description = description
+                db_session.commit()
+
+        return calendar_id
+
     def _get_google_service(self):
         """Return the Google API client."""
         with session_scope() as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
                 client_id = account.client_id or OAUTH_CLIENT_ID
-                client_secret = (account.client_secret or
-                                 OAUTH_CLIENT_SECRET)
+                client_secret = (account.client_secret or OAUTH_CLIENT_SECRET)
 
                 self.email = account.email_address
 
@@ -87,6 +119,7 @@ class GoogleEventsProvider(BaseEventProvider):
                 db_session.add(account)
                 db_session.commit()
                 raise ValidationError
+
             except ConnectionError:
                 self.log.error('Connection error')
                 account.sync_state = 'connerror'
@@ -95,7 +128,8 @@ class GoogleEventsProvider(BaseEventProvider):
                 raise ConnectionError
 
     def parse_event(self, event, cal_info):
-        """Constructs an Event object from a Google calendar entry.
+        """
+        Constructs an Event object from a Google calendar entry.
 
         Parameters
         ----------
@@ -111,6 +145,7 @@ class GoogleEventsProvider(BaseEventProvider):
         ------
         MalformedEventError
            If the calendar data could not be parsed correctly.
+
         """
         try:
             uid = str(event['id'])
@@ -284,15 +319,21 @@ class GoogleEventsProvider(BaseEventProvider):
 
     def fetch_calendar_items(self, provider_calendar_name, calendar_id,
                              sync_from_time=None):
-        """Fetch the events for an individual calendar.
-        parameters:
-            calendarId: the google identifier for the calendar. Usually,
-                username@gmail.com for the primary calendar otherwise
+        """
+        Fetch the events for an individual calendar.
+
+        Parameters
+        ----------
+            calendarId: the google identifier for the calendar.
+                Usually username@gmail.com for the primary calendar, otherwise
                 random-alphanumeric-address@google.com
+
             calendar_id: the id of the calendar in our db.
 
-        This function yields tuples to fetch_items. These tuples are eventually
-        consumed by base_poll in inbox.sync.base_sync.
+        This function yields tuples to fetch_items.
+        These tuples are eventually consumed by base_poll in
+        inbox.sync.base_sync.
+
         """
         service = self._get_google_service()
         # If applicable, only fetch results that have changed since we last
@@ -318,8 +359,11 @@ class GoogleEventsProvider(BaseEventProvider):
             yield (calendar_id, event, extra)
 
     def fetch_items(self, sync_from_time=None):
-        """Fetch all events for all calendars. This function proxies
-        fetch_calendar_items and yields the results to inbox.sync.base_sync."""
+        """
+        Fetch all events for all calendars. This function proxies
+        fetch_calendar_items and yields the results to inbox.sync.base_sync.
+
+        """
 
         service = self._get_google_service()
         try:

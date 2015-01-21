@@ -1,5 +1,8 @@
-"""Utility functions for creating, reading, updating and deleting events.
-Called by the API."""
+"""
+Utility functions for creating, reading, updating and deleting events.
+Called by the API.
+
+"""
 import uuid
 
 from sqlalchemy.orm import subqueryload
@@ -59,8 +62,7 @@ def read(namespace, db_session, event_public_id):
 def update(namespace, db_session, event_public_id, update_dict):
     event = db_session.query(Event).filter(
         Event.public_id == event_public_id,
-        Event.namespace_id == namespace.id). \
-        first()
+        Event.namespace_id == namespace.id).first()
 
     if event is None:
         return event
