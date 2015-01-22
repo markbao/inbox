@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.38, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.40-0ubuntu0.12.04.1-log
+-- Server version	5.5.38-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -145,7 +145,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('284227d72f51');
+INSERT INTO `alembic_version` VALUES ('2cebc0aec8e9');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -537,24 +537,19 @@ CREATE TABLE `event` (
   `title` varchar(1024) DEFAULT NULL,
   `description` text,
   `location` varchar(255) DEFAULT NULL,
-  `busy` tinyint(1) NOT NULL,
-  `reminders` varchar(255) DEFAULT NULL,
-  `recurrence` varchar(255) DEFAULT NULL,
   `start` datetime DEFAULT NULL,
   `end` datetime DEFAULT NULL,
   `all_day` tinyint(1) NOT NULL,
-  `source` enum('remote','local') NOT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `calendar_id` int(11) NOT NULL,
   `owner` varchar(255) DEFAULT NULL,
-  `is_owner` tinyint(1) NOT NULL,
   `read_only` tinyint(1) NOT NULL,
   `namespace_id` int(11) DEFAULT NULL,
   `participants_by_email` text NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uuid` (`uid`,`source`,`namespace_id`,`provider_name`),
+  UNIQUE KEY `uuid` (`uid`,`namespace_id`,`provider_name`),
   KEY `event_ibfk_2` (`calendar_id`),
   KEY `namespace_id` (`namespace_id`),
   CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`) ON DELETE CASCADE,
@@ -568,7 +563,7 @@ CREATE TABLE `event` (
 
 LOCK TABLES `event` WRITE;
 /*!40000 ALTER TABLE `event` DISABLE KEYS */;
-INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1,'{}'),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1,'{}'),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1,'{}');
+INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters','1970-01-01 00:00:01','1970-02-01 00:00:01',0,'2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,0,1,'{}'),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters','1970-01-01 00:00:01','1970-01-01 00:00:01',0,'2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,'{}'),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters','1970-02-01 00:00:01','1970-03-01 00:00:01',0,'2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,'{}');
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1740,4 +1735,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-01-20 10:21:17
+-- Dump completed on 2015-01-22 19:40:01

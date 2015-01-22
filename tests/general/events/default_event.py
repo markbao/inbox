@@ -14,23 +14,20 @@ def default_calendar(db_session):
 
 
 def default_event(db_session):
-    cal = default_calendar(db_session)
-    ev = Event(namespace_id=NAMESPACE_ID,
-               calendar=cal,
-               title='title',
-               description='',
-               location='',
-               busy=False,
-               read_only=False,
-               reminders='',
-               recurrence='',
-               start=START,
-               end=END,
-               all_day=False,
-               provider_name='inbox',
-               raw_data='',
-               source='local')
+    calendar = default_calendar(db_session)
 
-    db_session.add(ev)
+    event = Event(namespace_id=NAMESPACE_ID,
+                  calendar=calendar,
+                  title='title',
+                  description='',
+                  location='',
+                  read_only=False,
+                  start=START,
+                  end=END,
+                  all_day=False,
+                  provider_name='inbox',
+                  raw_data='')
+    db_session.add(event)
     db_session.commit()
-    return ev
+
+    return event

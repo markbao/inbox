@@ -29,7 +29,7 @@ SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 GoogleEvent = namedtuple(
     'GoogleEvent',
     'namespace_id uid raw_data title start end all_day description location '
-    'owner read_only participants')
+    'owner read_only participants deleted')
 
 
 class GoogleEventsProvider(BaseSyncProvider):

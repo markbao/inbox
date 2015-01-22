@@ -42,7 +42,7 @@ class ContactSync(BaseSync):
 
     @property
     def provider(self):
-        return __provider_map__[self._provider_name]
+        return __provider_map__[self.provider_name]
 
     @property
     def target_obj(self):

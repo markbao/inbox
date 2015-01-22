@@ -73,15 +73,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             self.participants_by_email = {}
 
     def update(self, session, event):
-        self.raw_data = event.raw_data,
-        self.title = event.title,
-        self.description = event.description,
-        self.location = event.location,
-        self.start = event.start,
-        self.end = event.end,
-        self.all_day = event.all_day,
-        self.owner = event.owner,
-        self.read_only = event.read_only,
+        self.raw_data = event.raw_data
+        self.title = event.title
+        self.description = event.description
+        self.location = event.location
+        self.start = event.start
+        self.end = event.end
+        self.all_day = event.all_day
+        self.owner = event.owner
+        self.read_only = event.read_only
         self.participants = event.participants
 
     @validates('owner', 'location', 'title', 'raw_data')

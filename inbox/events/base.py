@@ -42,7 +42,7 @@ class EventSync(BaseSync):
 
     @property
     def provider(self):
-        return __provider_map__[self._provider_name]
+        return __provider_map__[self.provider_name]
 
     @property
     def target_obj(self):
@@ -88,7 +88,7 @@ def poll_events(account_id, provider_instance, last_sync_fn, target_obj,
             # Note explicit offset is required by e.g. Google calendar API.
             last_sync = datetime.isoformat(last_sync_fn(account)) + 'Z'
 
-    calendars = provider_instance.get_calendars(last_sync)
+    calendars = provider_instance.get_calendars()
     calendar_ids = _sync_calendars(account_id, calendars, log, provider_name)
 
     for (uid, id_) in calendar_ids:
@@ -114,6 +114,7 @@ def _sync_calendars(account_id, calendars, log, provider_name):
 
             local = db_session.query(Calendar).filter(
                 Calendar.namespace == account.namespace,
+                Calendar.provider_name == provider_name,
                 Calendar.uid == uid).first()
 
             if local is not None:
@@ -121,13 +122,13 @@ def _sync_calendars(account_id, calendars, log, provider_name):
                     db_session.delete(local)
                     change_counter['deleted'] += 1
                 else:
-                    local.update(c)
+                    local.update(db_session, c)
                     change_counter['updated'] += 1
             else:
                 local = Calendar(namespace_id=namespace_id,
                                  uid=uid,
                                  provider_name=provider_name)
-                local.update(c)
+                local.update(db_session, c)
                 db_session.add(local)
                 db_session.flush()
                 change_counter['added'] += 1
@@ -151,16 +152,17 @@ def _sync_events(account_id, calendar_id, events, log, provider_name):
 
         change_counter = Counter()
         for e in events:
-            uid = e['uid']
+            uid = e.uid
             assert uid is not None, 'Got remote item with null uid'
 
             local = db_session.query(Event).filter(
                 Event.namespace == account.namespace,
+                Event.provider_name == provider_name,
                 Event.calendar_id == calendar_id,
                 Event.uid == uid).first()
 
             if local is not None:
-                if e['deleted']:
+                if e.deleted:
                     db_session.delete(local)
                     change_counter['deleted'] += 1
                 else:
