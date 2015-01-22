@@ -59,35 +59,13 @@ class GoogleEventsProvider(BaseSyncProvider):
         self.log = logger.new(account_id=account_id, component='event sync',
                               provider=self.PROVIDER_NAME)
 
-    def get_calendar_id(self, name, description=None):
-        calendar_id = None
-        with session_scope() as db_session:
-            cal = db_session.query(Calendar). \
-                filter_by(namespace_id=self.namespace_id,
-                          provider_name=self.PROVIDER_NAME,
-                          name=name).first()
-            if not cal:
-                cal = Calendar(namespace_id=self.namespace_id,
-                               provider_name=self.PROVIDER_NAME,
-                               name=name)
-                db_session.add(cal)
-                db_session.commit()
-            calendar_id = cal.id
-
-            # Update the description if appropriate
-            if cal.description != description:
-                cal.description = description
-                db_session.commit()
-
-        return calendar_id
-
     def _get_google_service(self):
         """Return the Google API client."""
         with session_scope() as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
                 client_id = account.client_id or OAUTH_CLIENT_ID
-                client_secret = (account.client_secret or OAUTH_CLIENT_SECRET)
+                client_secret = account.client_secret or OAUTH_CLIENT_SECRET
 
                 self.email = account.email_address
 
@@ -95,37 +73,70 @@ class GoogleEventsProvider(BaseSyncProvider):
                 refresh_token = account.refresh_token
                 expiry = account.access_expiry
 
-                credentials = OAuth2Credentials(
-                    access_token,
-                    client_id,
-                    client_secret,
-                    refresh_token,
-                    expiry,
-                    OAUTH_ACCESS_TOKEN_URL,
-                    SOURCE_APP_NAME)
+                credentials = OAuth2Credentials(access_token, client_id,
+                                                client_secret, refresh_token,
+                                                expiry, OAUTH_ACCESS_TOKEN_URL,
+                                                SOURCE_APP_NAME)
 
                 http = httplib2.Http()
                 http = credentials.authorize(http)
 
-                service = build(serviceName='calendar',
-                                version='v3',
-                                http=http)
-
+                service = build(serviceName='calendar', version='v3', http=http)
                 return service
-
             except OAuthError:
                 self.log.error('Invalid user credentials given')
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
                 raise ValidationError
-
             except ConnectionError:
                 self.log.error('Connection error')
                 account.sync_state = 'connerror'
                 db_session.add(account)
                 db_session.commit()
                 raise ConnectionError
+
+    def get_calendars(self, page_token=None, max_results=250):
+        show_deleted = True
+        calendars = []
+
+        service = self._get_google_service()
+
+        while True:
+            calendar_list = service.calendarList().list(
+                    showDeleted=show_deleted,
+                    pageToken=page_token,
+                    maxResults=max_results).execute()
+
+            calendars += calendar_list['items']
+            page_token = calendar_list.get('nextPageToken')
+
+            if page_token is None:
+                return [self._parse_calendar(c) for c in calendars]
+
+    def _parse_calendar(self, calendar):
+        uid = calendar['id']
+        name = calendar['summary']
+        read_only = calendar['accessRole'] == 'reader'
+        description = calendar.get('description', '')
+        deleted = calendar.get('deleted', False)
+
+        return dict(uid=uid, name=name, read_only=read_only,
+                    description=description, deleted=deleted)
+
+    def get_events(self, sync_from_time=None):
+        """
+        Fetch all events for all calendars. This function proxies
+        fetch_calendar_items and yields the results to inbox.sync.base_sync.
+
+        """
+
+        service = self._get_google_service()
+
+        for item in self.fetch_calendar_items(
+                response_calendar['id'], calendar_id,
+                sync_from_time=sync_from_time):
+            yield item
 
     def parse_event(self, event, cal_info):
         """
@@ -357,45 +368,3 @@ class GoogleEventsProvider(BaseSyncProvider):
 
         for event in raw_events:
             yield (calendar_id, event, extra)
-
-    def fetch_items(self, sync_from_time=None):
-        """
-        Fetch all events for all calendars. This function proxies
-        fetch_calendar_items and yields the results to inbox.sync.base_sync.
-
-        """
-
-        service = self._get_google_service()
-        try:
-            calendars = service.calendarList().list().execute()['items']
-        except AccessTokenRefreshError:
-            self.log.error("Invalid user credentials given")
-            with session_scope() as db_session:
-                account = db_session.query(GmailAccount).get(self.account_id)
-                account.sync_state = 'invalid'
-                db_session.add(account)
-                db_session.commit()
-            raise ValidationError
-        except HttpError as e:
-            self.log.warn("Error retrieving events",
-                          message=str(e))
-            return
-
-        for response_calendar in calendars:
-            # update the calendar
-            with session_scope() as db_session:
-                # FIXME: refactor this to take a db session.
-                calendar_id = self.get_calendar_id(
-                                response_calendar['id'],
-                                description=response_calendar['summary'])
-                # Update calendar statuses. They may have changed.
-                calendar = db_session.query(Calendar).get(calendar_id)
-                if response_calendar['accessRole'] == 'reader':
-                    calendar.read_only = True
-
-                calendar_id = calendar.id
-
-            for item in self.fetch_calendar_items(
-                    response_calendar['id'], calendar_id,
-                    sync_from_time=sync_from_time):
-                yield item

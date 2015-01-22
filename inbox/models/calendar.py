@@ -12,20 +12,18 @@ from inbox.models.mixins import HasPublicID
 class Calendar(MailSyncBase, HasPublicID):
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
-
     namespace = relationship(Namespace, load_on_pending=True)
 
-    name = Column(String(128), nullable=True)
     provider_name = Column(String(128), nullable=True)
-    description = Column(Text, nullable=True)
 
     # A server-provided unique ID.
     uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
-
+    name = Column(String(128), nullable=True)
     read_only = Column(Boolean, nullable=False, default=False)
+    description = Column(Text, nullable=True)
 
     __table_args__ = (UniqueConstraint('namespace_id', 'provider_name',
-                                       'name', name='uuid'),)
+                                       'uid', name='uuid'),)
 
     def __init__(self, uid=None, public_id=None, **kwargs):
         if not uid and not public_id:

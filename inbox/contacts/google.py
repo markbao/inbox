@@ -21,7 +21,7 @@ SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
 GoogleContact = namedtuple(
     'GoogleContact',
-    'namespace_id uid name provider_name email_address deleted raw_data')
+    'namespace_id uid name email_address deleted raw_data')
 
 
 class GoogleContactsProvider(BaseSyncProvider):
@@ -135,7 +135,6 @@ class GoogleContactsProvider(BaseSyncProvider):
 
         return GoogleContact(
             namespace_id=self.namespace_id, uid=g_id, name=name,
-            provider_name=self.PROVIDER_NAME,
             email_address=email_address, deleted=deleted,
             raw_data=raw_data)
 
@@ -172,7 +171,9 @@ class GoogleContactsProvider(BaseSyncProvider):
         query.max_results = max_results
         query.updated_min = sync_from_time
         query.showdeleted = True
+
         google_client = self._get_google_client()
+
         try:
             results = google_client.GetContacts(q=query).entry
             return [self._parse_contact_result(result) for result in results]
