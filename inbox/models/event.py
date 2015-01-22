@@ -33,10 +33,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                           nullable=False)
     namespace = relationship(Namespace, load_on_pending=True)
 
-    # A constant, unique identifier for the remote backend this event came
-    # from. E.g., 'google', 'eas', 'inbox'
-    provider_name = Column(String(64), nullable=False)
-
     calendar_id = Column(ForeignKey(Calendar.id, ondelete='CASCADE'),
                          nullable=False)
     calendar = relationship(Calendar,
@@ -60,8 +56,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     owner = Column(String(OWNER_MAX_LEN), nullable=True)
     read_only = Column(Boolean, nullable=False)
 
-    __table_args__ = (UniqueConstraint('uid', 'namespace_id', 'provider_name',
-                                       name='uuid'),)
+    __table_args__ = (UniqueConstraint('uid', 'namespace_id', name='uuid'),)
 
     _participant_cascade = 'save-update, merge, delete, delete-orphan'
     participants_by_email = Column(MutableDict.as_mutable(JSON), default={},
@@ -117,8 +112,11 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     @participant_list.setter
     def participant_list(self, p_list):
-        """ Updates the participant list based off of a list so that order can
-        be preserved from creation time. (Doesn't allow re-ordering)"""
+        """
+        Updates the participant list based off of a list so that order can
+        be preserved from creation time. (Doesn't allow re-ordering).
+
+        """
 
         # First add or update the ones we don't have yet
         all_emails = []

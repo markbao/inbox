@@ -30,7 +30,6 @@ def update_contacts_from_message(db_session, message, namespace):
             if canonicalized_address not in contact_map:
                 new_contact = Contact(name=name, email_address=email_address,
                                       namespace=namespace,
-                                      provider_name='inbox',
                                       uid=uuid.uuid4().hex)
                 contact_map[canonicalized_address] = new_contact
 

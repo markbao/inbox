@@ -17,10 +17,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
                           nullable=False)
     namespace = relationship(Namespace, load_on_pending=True)
 
-    # A constant, unique identifier for the remote backend this contact came
-    # from. E.g., 'google', 'eas', 'inbox'
-    provider_name = Column(String(64))
-
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
     name = Column(Text)
@@ -29,8 +25,12 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     # precomputed to facilitate performant search.
     score = Column(Integer)
 
-    __table_args__ = (UniqueConstraint('uid', 'namespace_id',
-                                       'provider_name'),)
+    __table_args__ = (UniqueConstraint('uid', 'namespace_id'),)
+
+    def update(self, session, contact):
+        self.name = contact.name
+        self.raw_data = contact.raw_data
+        self.email_address = contact.email_address
 
     @validates('raw_data')
     def validate_length(self, key, value):

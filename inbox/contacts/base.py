@@ -79,7 +79,6 @@ def poll_contacts(account_id, provider_instance, last_sync_fn, target_obj,
     # Get a timestamp before polling, so that we don't subsequently miss remote
     # updates that happen while the poll loop is executing.
     sync_timestamp = datetime.utcnow()
-    provider_name = provider_instance.PROVIDER_NAME
 
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
@@ -101,7 +100,6 @@ def poll_contacts(account_id, provider_instance, last_sync_fn, target_obj,
 
             local_item = db_session.query(target_obj).filter(
                 target_obj.namespace == account.namespace,
-                target_obj.provider_name == provider_name,
                 target_obj.uid == item.uid).first()
 
             if local_item is not None:
@@ -109,15 +107,12 @@ def poll_contacts(account_id, provider_instance, last_sync_fn, target_obj,
                     db_session.delete(local_item)
                     change_counter['deleted'] += 1
                 else:
-                    local_item.name = item.name
-                    local_item.email_address = item.email_address
-                    local_item.raw_data = item.raw_data
+                    local_item.update(item)
                     change_counter['updated'] += 1
             else:
-                local_item = target_obj(
-                    namespace_id=namespace_id, uid=item.uid,
-                    name=item.name, provider_name=provider_name,
-                    email_address=item.email_address, raw_data=item.raw_data)
+                local_item = target_obj(namespace_id=namespace_id,
+                                        uid=item.uid)
+                local_item.update(item)
                 db_session.add(local_item)
                 db_session.flush()
                 change_counter['added'] += 1

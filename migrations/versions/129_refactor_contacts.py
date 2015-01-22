@@ -23,12 +23,13 @@ def upgrade():
             '''
         )
     )
+    op.drop_column('contact', 'provider_name')
 
     op.drop_constraint('uid', 'contact', type_='unique')
     op.drop_column('contact', 'source')
 
     op.create_unique_constraint('uid', 'contact',
-                                ['uid', 'namespace_id', 'provider_name'])
+                                ['uid', 'namespace_id'])
 
 
 def downgrade():

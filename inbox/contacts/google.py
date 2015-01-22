@@ -21,7 +21,7 @@ SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
 GoogleContact = namedtuple(
     'GoogleContact',
-    'namespace_id uid name email_address deleted raw_data')
+    'namespace_id uid name email_address raw_data deleted')
 
 
 class GoogleContactsProvider(BaseSyncProvider):

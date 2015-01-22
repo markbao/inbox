@@ -79,7 +79,6 @@ def poll_events(account_id, provider_instance, last_sync_fn, target_obj,
     # Get a timestamp before polling, so that we don't subsequently miss remote
     # updates that happen while the poll loop is executing.
     sync_timestamp = datetime.utcnow()
-    provider_name = provider_instance.PROVIDER_NAME
 
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
@@ -89,18 +88,18 @@ def poll_events(account_id, provider_instance, last_sync_fn, target_obj,
             last_sync = datetime.isoformat(last_sync_fn(account)) + 'Z'
 
     calendars = provider_instance.get_calendars()
-    calendar_ids = _sync_calendars(account_id, calendars, log, provider_name)
+    calendar_ids = _sync_calendars(account_id, calendars, log)
 
     for (uid, id_) in calendar_ids:
         events = provider_instance.get_events(uid, sync_from_time=last_sync)
-        _sync_events(account_id, id_, events, log, provider_name)
+        _sync_events(account_id, id_, events, log)
 
     with session_scope() as db_session:
         set_last_sync_fn(account, sync_timestamp)
         db_session.commit()
 
 
-def _sync_calendars(account_id, calendars, log, provider_name):
+def _sync_calendars(account_id, calendars, log):
     ids_ = []
 
     with session_scope() as db_session:
@@ -114,7 +113,6 @@ def _sync_calendars(account_id, calendars, log, provider_name):
 
             local = db_session.query(Calendar).filter(
                 Calendar.namespace == account.namespace,
-                Calendar.provider_name == provider_name,
                 Calendar.uid == uid).first()
 
             if local is not None:
@@ -126,8 +124,7 @@ def _sync_calendars(account_id, calendars, log, provider_name):
                     change_counter['updated'] += 1
             else:
                 local = Calendar(namespace_id=namespace_id,
-                                 uid=uid,
-                                 provider_name=provider_name)
+                                 uid=uid)
                 local.update(db_session, c)
                 db_session.add(local)
                 db_session.flush()
@@ -145,7 +142,7 @@ def _sync_calendars(account_id, calendars, log, provider_name):
     return ids_
 
 
-def _sync_events(account_id, calendar_id, events, log, provider_name):
+def _sync_events(account_id, calendar_id, events, log):
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
         namespace_id = account.namespace.id
@@ -157,7 +154,6 @@ def _sync_events(account_id, calendar_id, events, log, provider_name):
 
             local = db_session.query(Event).filter(
                 Event.namespace == account.namespace,
-                Event.provider_name == provider_name,
                 Event.calendar_id == calendar_id,
                 Event.uid == uid).first()
 
@@ -171,8 +167,7 @@ def _sync_events(account_id, calendar_id, events, log, provider_name):
             else:
                 local = Event(namespace_id=namespace_id,
                               calendar_id=calendar_id,
-                              uid=uid,
-                              provider_name=provider_name)
+                              uid=uid)
                 local.update(db_session, e)
                 db_session.add(local)
                 db_session.flush()

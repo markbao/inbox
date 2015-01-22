@@ -23,7 +23,7 @@ def upgrade():
             '''
         )
     )
-
+    op.drop_column('event', 'provider_name')
     op.drop_column('event', 'reminders')
     op.drop_column('event', 'recurrence')
     op.drop_column('event', 'is_owner')
@@ -33,7 +33,7 @@ def upgrade():
     op.drop_column('event', 'source')
 
     op.create_unique_constraint('uuid', 'event',
-                                ['uid', 'namespace_id', 'provider_name'])
+                                ['uid', 'namespace_id'])
 
 
 def downgrade():
