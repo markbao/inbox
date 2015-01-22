@@ -155,7 +155,7 @@ class GoogleEventsProvider(BaseSyncProvider):
             if page_token is None:
                 return [self._parse_event(e) for e in events]
 
-    def _parse_event(self, event, cal_info):
+    def _parse_event(self, event):
         """
         Constructs an Event object from a Google calendar entry.
 
